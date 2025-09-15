@@ -9,9 +9,24 @@ const Stack = createNativeStackNavigator();
 export default function AppNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="Map" component={MapScreen} />
-        <Stack.Screen name="Report" component={ReportScreen} />
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: "#121212" }, // dark header background
+          headerTintColor: "#fff", // white text/icons
+          headerTitleStyle: { fontWeight: "bold" },
+          contentStyle: { backgroundColor: "#1E1E1E" }, // dark screen background
+        }}
+      >
+        <Stack.Screen
+          name="Ice Sightings"
+          component={MapScreen}
+          options={{ title: "Ice Sightings" }}
+        />
+        <Stack.Screen
+          name="Report"
+          component={ReportScreen}
+          options={{ title: "Report Ice" }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

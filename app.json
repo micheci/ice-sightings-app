@@ -13,7 +13,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "We need camera access so you can take a photo of the sighting.",
+        "NSPhotoLibraryUsageDescription": "We need access to your photo library to upload a sighting."
+      }
     },
     "android": {
       "adaptiveIcon": {
