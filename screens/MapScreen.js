@@ -13,6 +13,7 @@ import MapView, { Marker, Callout } from "react-native-maps";
 import * as Location from "expo-location";
 import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const SCREEN_HEIGHT = Dimensions.get("window").height;
@@ -23,7 +24,6 @@ export default function MapScreen({ navigation }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const mapRef = useRef(null);
 
-  // Fetch sightings whenever screen focuses
   useFocusEffect(
     React.useCallback(() => {
       fetchSightings();
@@ -31,14 +31,11 @@ export default function MapScreen({ navigation }) {
   );
 
   useEffect(() => {
-    getCurrentLocation();
+    goToMe();
   }, []);
 
   const getPinColor = (timestamp) => {
-    const now = new Date();
-    const sightingTime = new Date(timestamp);
-    const hoursAgo = (now - sightingTime) / 1000 / 60 / 60;
-
+    const hoursAgo = (new Date() - new Date(timestamp)) / 1000 / 60 / 60;
     if (hoursAgo < 3) return "red";
     if (hoursAgo < 6) return "orange";
     if (hoursAgo < 12) return "yellow";
@@ -54,7 +51,7 @@ export default function MapScreen({ navigation }) {
     }
   };
 
-  const getCurrentLocation = async () => {
+  const goToMe = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") return;
 
@@ -66,22 +63,19 @@ export default function MapScreen({ navigation }) {
       longitudeDelta: 0.05,
     };
     setRegion(newRegion);
-
-    if (mapRef.current) mapRef.current.animateToRegion(newRegion, 500);
+    mapRef.current?.animateToRegion(newRegion, 500);
   };
 
   const goToSighting = (s) => {
-    if (mapRef.current) {
-      mapRef.current.animateToRegion(
-        {
-          latitude: s.lat,
-          longitude: s.lng,
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
-        },
-        500
-      );
-    }
+    mapRef.current?.animateToRegion(
+      {
+        latitude: s.lat,
+        longitude: s.lng,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      },
+      500
+    );
   };
 
   return (
@@ -93,7 +87,6 @@ export default function MapScreen({ navigation }) {
           region={region}
           mapType="standard"
         >
-          {/* User location */}
           <Marker
             coordinate={{
               latitude: region.latitude,
@@ -102,16 +95,14 @@ export default function MapScreen({ navigation }) {
             title="You are here"
             pinColor="#4FC3F7"
           />
-
-          {/* Sightings */}
           {sightings.map((s) => (
             <Marker
               key={s.id}
               coordinate={{ latitude: s.lat, longitude: s.lng }}
               pinColor={getPinColor(s.timestamp)}
-              onCalloutPress={() => {
-                if (s.image_url) setSelectedImage(s.image_url);
-              }}
+              onCalloutPress={() =>
+                s.image_url && setSelectedImage(s.image_url)
+              }
             >
               <Callout>
                 <View style={styles.callout}>
@@ -128,29 +119,33 @@ export default function MapScreen({ navigation }) {
           ))}
         </MapView>
       )}
-      {/* Info Button */}
-      <TouchableOpacity
-        style={{
-          position: "absolute",
-          top: 40,
-          right: 20,
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: "#333",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        onPress={() =>
-          alert(
-            "Marker colors:\n\n🔴 Red: Just reported\n🟠 Orange: Reported 3–6 hours ago\n🟡 Yellow: Reported 6–12 hours ago\n🔵 Blue: Older reports"
-          )
-        }
-      >
-        <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 18 }}>
-          ?
-        </Text>
-      </TouchableOpacity>
+
+      {/* Top Right Buttons */}
+      <View style={styles.topRightButtons}>
+        {/* Info */}
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() =>
+            alert(
+              "Marker colors:\n\n🔴 Red: Just reported\n🟠 Orange: Reported 3–6 hours ago\n🟡 Yellow: Reported 6–12 hours ago\n🔵 Blue: Older reports"
+            )
+          }
+        >
+          <Text style={{ color: "#FFF", fontWeight: "bold", fontSize: 18 }}>
+            ?
+          </Text>
+        </TouchableOpacity>
+
+        {/* Refresh */}
+        <TouchableOpacity style={styles.iconButton} onPress={fetchSightings}>
+          <Ionicons name="refresh" size={22} color="#FFF" />
+        </TouchableOpacity>
+
+        {/* Go To Me */}
+        <TouchableOpacity style={styles.iconButton} onPress={goToMe}>
+          <Ionicons name="locate" size={22} color="#FFF" />
+        </TouchableOpacity>
+      </View>
 
       {/* Image Modal */}
       <Modal
@@ -193,22 +188,12 @@ export default function MapScreen({ navigation }) {
         )}
       </View>
 
-      {/* Buttons */}
+      {/* Bottom Report Ice Button */}
       <TouchableOpacity
-        style={[styles.button, { bottom: 30, right: 20 }]}
+        style={styles.reportButton}
         onPress={() => navigation.navigate("Report")}
       >
         <Text style={styles.buttonText}>Report Ice</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.button,
-          { bottom: 30, left: 20, backgroundColor: "#00C853" },
-        ]}
-        onPress={getCurrentLocation}
-      >
-        <Text style={styles.buttonText}>Go To Me</Text>
       </TouchableOpacity>
     </View>
   );
@@ -258,13 +243,36 @@ const styles = StyleSheet.create({
     backgroundColor: "#1E1E1E",
   },
   sightingText: { color: "#FFF" },
-  button: {
+  reportButton: {
     position: "absolute",
-    padding: 15,
+    bottom: 20,
+    left: 20,
+    right: 20,
+    padding: 18,
     borderRadius: 50,
     backgroundColor: "#2962FF",
     justifyContent: "center",
     alignItems: "center",
   },
   buttonText: { color: "#FFF", fontWeight: "bold" },
+  topRightButtons: {
+    position: "absolute",
+    top: 15,
+    right: 15,
+    flexDirection: "row",
+    gap: 10,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#333",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
 });
